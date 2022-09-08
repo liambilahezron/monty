@@ -1,54 +1,47 @@
 #include "monty.h"
 
-int num = 0;
-int data_format = 0;
-int exit_check = 0;
+vars var;
 
 /**
- * main - interpreter for Monty ByteCodes files
- * @argc: arguments count
- * @argv: arguments passed in the command line
- * Return: TBD
+ * main - Start LIFO, FILO program
+ * @ac: Number of arguments
+ * @av: Pointer containing arguments
+ * Return: 0 Success, 1 Failed
  */
-
-int main(int argc, char **argv)
+int main(int ac, char **av)
 {
-	char *buf = NULL, *file = NULL, *token = NULL, *array[2];
-	size_t bufsize = 0, line_number = 1;
-	FILE *fp = NULL;
-	void (*ptr)();
-	stack_t *head = NULL;
+	char *opcode;
 
-	if (argc != 2)
-		dprintf(2, "USAGE: monty file\n"), exit(EXIT_FAILURE);
-	file = argv[1];
-	fp = fopen(file, "r");
-	if (fp == NULL)
-		dprintf(2, "Error: Can't open file %s\n", argv[1]), exit(EXIT_FAILURE);
-	while (getline(&buf, &bufsize, fp) != -1)
+	if (ac != 2)
 	{
-		token = strtok(buf, " \t\n");
-		array[0] = token;
-		if (!iscomment(array[0]))
-		{
-			line_number++;
-			continue;
-		}
-		if (strcmp("push", array[0]) == 0)
-		{
-			token = strtok(NULL, " \t\n");
-			array[1] = token;
-			num = isnumber(array[1], line_number);
-			exit_failure_check(buf, fp, head);
-		}
-		ptr = get_opcode_func(array[0]);
-		if (ptr != NULL)
-			(*ptr)(&head, line_number);
-		else
-			dprintf(2, "L%i: unknown instruction %s\n", (int)line_number, array[0]);
-		exit_failure_check(buf, fp, head);
-		line_number++;
+		fprintf(stderr, "USAGE: monty file\n");
+		return (EXIT_FAILURE);
 	}
-	free(buf), fclose(fp), free_stackt(head);
-	return (0);
+
+	if (start_vars(&var) != 0)
+		return (EXIT_FAILURE);
+
+	var.file = fopen(av[1], "r");
+	if (!var.file)
+	{
+		fprintf(stderr, "Error: Can't open file %s\n", av[1]);
+		free_all();
+		return (EXIT_FAILURE);
+	}
+
+	while (getline(&var.buff, &var.tmp, var.file) != EOF)
+	{
+		opcode = strtok(var.buff, " \r\t\n");
+		if (opcode != NULL)
+			if (call_funct(&var, opcode) == EXIT_FAILURE)
+			{
+				free_all();
+				return (EXIT_FAILURE);
+			}
+		var.line_number++;
+	}
+
+	free_all();
+
+	return (EXIT_SUCCESS);
 }
